@@ -53,3 +53,5 @@ The dataset is structured in the following format:
 - The first point is the starting point.
 - The last point is the ending point.
 - The Euclidean distance is used.
+
+## Usage

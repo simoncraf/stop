@@ -1,0 +1,13 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "stop"
+version = "0.1.0"
+description = "Recreation of the simheuristic algorithm for the Stochastic Team Orienteering Problem (STOP), combining a Variable Neighborhood Search (VNS) metaheuristic with Monte Carlo simulation to maximize surveillance drone rewards under uncertain travel times."
+authors = ["Simone Gigante <simonegigante17@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
