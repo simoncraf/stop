@@ -1,14 +1,31 @@
+import numpy as np
 from node import Node
 from route import Route
 
-def savings_heuristic(nodes, origin, destination, battery_limit):
+def savings_heuristic(nodes, origin, destination, num_paths, battery_limit, alpha: float = 0.5, beta: float|None = None):
+    """
+    Constructive savings heuristic with optional biased randomization.
+    
+    :param nodes: List of nodes.
+    :param origin: Origin node.
+    :param destination: Destination node.
+    :param num_paths: Number of paths (vehicles).
+    :param battery_limit: Battery limit for each vehicle.
+    :param alpha: Tuning parameter for savings calculation.
+    :param beta: Parameter for the geometric distribution (if None, no randomization).
+    :return: List of Route objects.
+    """
     solution = generate_dummy_soultion(nodes, origin, destination, battery_limit)
     distance_matrix = _compute_distance_matrix(nodes)
     rewards = [node.score for node in nodes]
-    savings = _compute_savings_list(distance_matrix, rewards)
+    savings = _compute_savings_list(distance_matrix, rewards, alpha)
     
     while savings:
-        arc = savings.pop(0)
+        if beta is not None:
+            arc = _biased_random_choice(savings, beta)
+            savings.remove(arc)
+        else:
+            arc = savings.pop(0)
         routei, routej = Route(origin, destination), Route(origin, destination)
         routei.add_node(nodes[arc[0]])
         routej.add_node(nodes[arc[1]])
@@ -17,7 +34,7 @@ def savings_heuristic(nodes, origin, destination, battery_limit):
             solution.append(new_route)
     for route in solution:
         route.nodes.append(destination)        
-    return sorted(solution, key=lambda x: x.total_score, reverse=True)
+    return sorted(solution, key=lambda x: x.total_score, reverse=True)[:num_paths]
 
 def generate_dummy_soultion(nodes, origin, destination, battery_limit):
     routes = []
@@ -42,7 +59,7 @@ def _compute_distance_matrix(nodes: list[Node]):
 
     return distance_matrix
 
-def _compute_savings_list(distance_matrix, rewards, alpha: float = 0.5):
+def _compute_savings_list(distance_matrix, rewards, alpha):
     num_nodes = len(distance_matrix)
     savings_list = []
     for i in range(1, num_nodes - 1):
@@ -54,3 +71,28 @@ def _compute_savings_list(distance_matrix, rewards, alpha: float = 0.5):
                 savings_list.append((i, j, savings_ij))
     
     return sorted(savings_list, key=lambda x: x[2], reverse=True)
+
+def _biased_random_choice(savings, beta=0.3):
+    """
+    Select an item from the savings list using biased randomization.
+    
+    :param savings: List of tuples (saving, i, j).
+    :param beta: Parameter for the geometric distribution.
+    :return: Selected (saving, i, j).
+    """
+    probabilities = [beta * (1 - beta) ** i for i in range(len(savings))]
+    probabilities = np.array(probabilities) / sum(probabilities)
+    return savings[np.random.choice(len(savings), p=probabilities)]
+
+def get_best_alpha(nodes, origin, destination, num_paths, battery_limit):
+    alphas = np.linspace(0.1, 0.9, 100)
+    best_alpha = 0
+    best_score = 0
+    for alpha in alphas:
+        solution = savings_heuristic(nodes, origin, destination, num_paths, battery_limit, alpha)
+        new_score = sum([route.total_score for route in solution])
+        if new_score > best_score:
+            best_score = new_score
+            best_alpha = alpha
+            
+    return best_alpha

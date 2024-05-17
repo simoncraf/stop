@@ -1,4 +1,4 @@
-from savings_heuristic import savings_heuristic
+from savings_heuristic import savings_heuristic, get_best_alpha
 from utils import load_data
 
 def main():
@@ -11,11 +11,11 @@ def main():
     origin, destination = nodes[0], nodes[-1]
     print('Origin:', origin)
     print('Destination:', destination)
-
-    solution = savings_heuristic(nodes, origin, destination, battery_limit)
+    alpha = get_best_alpha(nodes, origin, destination, num_paths, battery_limit)
+    solution = savings_heuristic(nodes, origin, destination, num_paths, battery_limit, alpha)
     print('Number of feasible routes:', len(solution))
     print(f"The best {num_paths} routes are:\n")
-    for sol in solution[:num_paths]:
+    for sol in solution:
         nodes = [str(node.index) for node in sol.nodes]
         print(f"Route from {origin.index} to {destination.index} passing through {nodes} with total distance {round(sol.total_distance, 4)} and total score {sol.total_score}")
 
