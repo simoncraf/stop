@@ -23,3 +23,9 @@ class Route:
     def is_route_feasible(self, battery_limit, average_speed=10):
         distance_to_destination = self.nodes[-1].distance_to(self.destination)
         return (self.total_distance + distance_to_destination) / average_speed <= battery_limit
+    
+    def merge(self, route):
+        self.nodes.extend(route.nodes[1:])
+        self.total_distance += route.total_distance
+        self.total_score += route.total_score
+        return self
