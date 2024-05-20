@@ -1,6 +1,7 @@
 import random
 import time
 import numpy as np
+from node import Node
 from route import Route
 from savings_heuristic import savings_heuristic, get_best_alpha
 
@@ -14,8 +15,7 @@ def vns(nodes, origin, destination, num_paths, battery_limit):
     init_sol = savings_heuristic(nodes, origin, destination, num_paths, battery_limit, alpha)
     base_sol = init_sol
     best_sol = init_sol
-    fast_simulation(base_sol)
-    best_sol = base_sol
+    expected_score = fast_simulation(base_sol, battery_limit, 10)
     T = 1000
     lambda_ = 0.999
     max_iter = 100
@@ -27,7 +27,7 @@ def vns(nodes, origin, destination, num_paths, battery_limit):
     while (time.time() - start_time) < max_time:
         k = 1
         while k <= max_iter:
-            new_sol = shaking(base_sol, k)
+            new_sol = shaking(base_sol, k, nodes, origin, destination, num_paths, battery_limit, alpha)
             new_sol = local_search1(new_sol)
             new_sol = local_search2(new_sol)
             new_sol = local_search3(new_sol)
@@ -84,28 +84,26 @@ def fast_simulation(solution, battery_limit, average_speed, num_simulations=100,
     expected_profit = total_profit / num_simulations
     return expected_profit
 
-def shaking(solution: list[Route], k: float = 0.3):
+def shaking(base_sol: list[Route], k: float, nodes: list[Node], origin: Node, destination: Node, num_paths: int, battery_limit: float, alpha: float, beta: float=0.3):
     """
     Perform the shaking operation to generate a new solution.
     
-    :param solution: The current solution.
+    :param base_sol: The current solution.
     :param k: The shaking parameter.
+    :param nodes
     :return: The new solution.
     """
-    
-    return new_solution
+    num_routes_to_delete = max(1,int(len(base_sol) * k/100))
+    remaining_routes = base_sol.copy()
 
-def _biased_random_choice(savings, beta=0.3):
-    """
-    Select an item from savings list using biased randomization.
+    for _ in range(num_routes_to_delete):
+        route = random.choice(remaining_routes)
+        remaining_routes.remove(route)
+
+    deleted_nodes = {node for route in base_sol if route not in remaining_routes for node in route.nodes}
+    new_routes = savings_heuristic(list(deleted_nodes), origin, destination, num_paths, battery_limit, alpha, beta)
     
-    :param savings: List of tuples (saving, i, j).
-    :param beta: Parameter for the geometric distribution.
-    :return: Selected (saving, i, j).
-    """
-    probabilities = [beta * (1 - beta) ** i for i in range(len(savings))]
-    probabilities = np.array(probabilities) / sum(probabilities)
-    return savings[np.random.choice(len(savings), p=probabilities)]
+    return remaining_routes + new_routes
 
 def local_search1(solution):
     # Implement the first local search method here (e.g., 2-opt local search)

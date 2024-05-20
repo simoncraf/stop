@@ -15,6 +15,7 @@ def savings_heuristic(nodes, origin, destination, num_paths, battery_limit, alph
     :param beta: Parameter for the geometric distribution (if None, no randomization).
     :return: List of Route objects.
     """
+    nodes = sorted(nodes, key=lambda x: x.index)
     solution = generate_dummy_soultion(nodes, origin, destination, battery_limit)
     distance_matrix = _compute_distance_matrix(nodes)
     rewards = [node.score for node in nodes]
