@@ -7,12 +7,17 @@ from node import Node
 from route import Route
 from savings_heuristic import savings_heuristic, get_best_alpha
 
-T = 1000
-lambda_ = 0.999
-max_iter = 100
-max_time = 60*60
-
 def vns(nodes, origin, destination, num_paths, battery_limit):
+    """
+    Applies the Variable Neighborhood Search (VNS) algorithm to find the best solution for a given problem.
+
+    :param nodes: List of nodes.
+    :param origin: Origin node.
+    :param destination: Destination node.
+    :param num_paths: Number of paths (vehicles).
+    :param battery_limit: Battery limit for each vehicle.
+    :return: List of Route objects representing the best solution found.
+    """
     alpha = get_best_alpha(nodes, origin, destination, num_paths, battery_limit)
     init_sol = savings_heuristic(nodes, origin, destination, num_paths, battery_limit, alpha)
     base_sol = init_sol
@@ -21,41 +26,43 @@ def vns(nodes, origin, destination, num_paths, battery_limit):
     T = 1000
     lambda_ = 0.999
     max_iter = 100
-    max_time = 3600 
+    max_time = 120 
     start_time = time.time()
 
     pool_of_best_solutions = []
+    k = 1
+    while (time.time() - start_time) < max_time and k <= max_iter:
+        logger.info(f"Current iteration: {k}, with T = {T}")
+        new_sol = shaking(base_sol, k, origin, destination, num_paths, battery_limit, alpha)
+        new_sol = local_search1(new_sol)
+        new_sol = local_search2(new_sol)
 
-    while (time.time() - start_time) < max_time:
-        k = 1
-        while k <= max_iter:
-            logger.info(f"Current iteration: {k}")
-            new_sol = shaking(base_sol, k, origin, destination, num_paths, battery_limit, alpha)
-            new_sol = local_search1(new_sol)
-            new_sol = local_search2(new_sol)
-            new_sol = local_search3(new_sol, nodes, origin, destination, battery_limit)
-            
-            if det_profit(new_sol) > det_profit(base_sol):
-                base_stochastic_profit = mc_simulation(base_sol, battery_limit, 1)
-                new_stochastic_profit = mc_simulation(new_sol, battery_limit, 1)
-                if new_stochastic_profit > base_stochastic_profit:
-                    logger.info(f"New base solution found: {new_stochastic_profit}")
-                    base_sol = new_sol
-                    best_stochastic_profit = mc_simulation(best_sol, battery_limit, 1)
-                    if new_stochastic_profit > best_stochastic_profit:
-                        logger.warning(f"New best solution found: {new_stochastic_profit}")
-                        best_sol = new_sol
-                        pool_of_best_solutions.append(best_sol)
+        new_sol = local_search3(new_sol, nodes, origin, destination, battery_limit)
+        
+        base_det_profit = det_profit(base_sol)
+        new_det_profit = det_profit(new_sol)
+        
+        if new_det_profit > base_det_profit:
+            base_stochastic_profit = mc_simulation(base_sol, battery_limit, 1)
+            new_stochastic_profit = mc_simulation(new_sol, battery_limit, 1)
+            if new_stochastic_profit > base_stochastic_profit:
+                logger.info(f"New base solution found: {new_stochastic_profit}")
+                base_sol = new_sol
+                best_stochastic_profit = mc_simulation(best_sol, battery_limit, 1)
+                if new_stochastic_profit > best_stochastic_profit:
+                    logger.warning(f"New best solution found: {new_stochastic_profit}")
+                    best_sol = new_sol
+                    pool_of_best_solutions.append(best_sol)
+            k = 1
+        else:
+            update_prob = prob_of_updating(new_det_profit, base_det_profit, T)
+            if update_prob >= random.random():
+                logger.info(f"Non-improving solution accepted with probability {update_prob}")
+                base_sol = new_sol
                 k = 1
             else:
-                update_prob = prob_of_updating(det_profit(new_sol), det_profit(base_sol), T)
-                if update_prob >= random.random():
-                    logger.info(f"Non-improving solution accepted with probability {update_prob}")
-                    base_sol = new_sol
-                    k = 1
-                else:
-                    k += 1
-            T *= lambda_
+                k += 1
+        T *= lambda_
     
     best_sol_deep_profit = mc_simulation(best_sol, battery_limit, 1)
     for sol in pool_of_best_solutions:
@@ -236,18 +243,21 @@ def _remove_and_reinsert_nodes(route):
     
     remaining_nodes = [node for node in route.nodes if node not in nodes_to_remove]
     new_route = Route(route.origin, route.destination)
-    for node in remaining_nodes:
+    
+    for node in remaining_nodes[1:-1]:
         new_route.add_node(node)
     
     for node in nodes_to_remove:
         best_position = None
         best_distance = float('inf')
+        
         for i in range(1, len(new_route.nodes)):
             temp_route = new_route.nodes[:i] + [node] + new_route.nodes[i:]
             temp_distance = _calculate_route_distance(temp_route)
             if temp_distance < best_distance:
                 best_distance = temp_distance
                 best_position = i
+        
         new_route.nodes.insert(best_position, node)
         new_route.total_distance = best_distance
         new_route.total_score += node.score

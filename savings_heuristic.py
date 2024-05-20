@@ -46,6 +46,15 @@ def savings_heuristic(nodes, origin, destination, num_paths, battery_limit, alph
     return sorted(solution, key=lambda x: x.total_score, reverse=True)[:num_paths]
 
 def generate_dummy_solution(nodes, origin, destination, battery_limit):
+    """
+    Generate a dummy solution by adding nodes to a route and checking if the route is feasible within the battery limit.
+
+    :param nodes: List of nodes.
+    :param origin: Origin node.
+    :param destination: Destination node.
+    :param battery_limit: Battery limit for each vehicle.
+    :return: List of Route objects.
+    """
     routes = []
     for node in nodes[1:-1]:
         route = Route(origin, destination)
@@ -68,6 +77,14 @@ def _compute_distance_matrix(nodes: list[Node]):
     return distance_matrix
 
 def _compute_savings_list(distance_matrix, rewards, alpha):
+    """
+    Compute the savings list for the Clarke-Wright savings heuristic.
+    
+    :param distance_matrix: Distance matrix.
+    :param rewards: List of rewards for each node.
+    :param alpha: Tuning parameter for savings calculation.
+    :return: List of tuples (i, j, savings_ij).
+    """
     num_nodes = len(distance_matrix)
     savings_list = []
     for i in range(1, num_nodes - 1):
@@ -93,12 +110,29 @@ def _biased_random_choice(savings, beta=0.3):
     return savings[np.random.choice(len(savings), p=probabilities)]
 
 def _find_route_containing_node(solution, node):
+    """
+    Find the route containing a specific node.
+    
+    :param solution: List of Route objects.
+    :param node: Node object.
+    :return: Route object or None.
+    """
     for route in solution:
         if node in route.nodes:
             return route
     return None
 
 def get_best_alpha(nodes, origin, destination, num_paths, battery_limit):
+    """
+    Get the best alpha parameter for the savings heuristic.
+    
+    :param nodes: List of nodes.
+    :param origin: Origin node.
+    :param destination: Destination node.
+    :param num_paths: Number of paths (vehicles).
+    :param battery_limit: Battery limit for each vehicle.
+    :return: Best alpha parameter.
+    """
     alphas = np.linspace(0.1, 0.9, 100)
     best_alpha = 0
     best_score = 0

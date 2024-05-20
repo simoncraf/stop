@@ -1,6 +1,12 @@
 from node import Node
 
 def load_data(path: str) -> tuple[int, int, int, list[Node]]:
+    """
+    Load data from a file and return the number of nodes, number of paths, battery limit and a list of nodes.
+    
+    :param path: Path to the file.
+    :return: Tuple containing the number of nodes, number of paths, battery limit and a list of nodes.
+    """
     with open(path, 'r') as f:
         data = f.readlines()
         

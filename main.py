@@ -20,5 +20,4 @@ def main():
         print(f"Route from {origin.index} to {destination.index} passing through {nodes} with total distance {round(sol.total_distance, 4)} and total score {sol.total_score}")
 
 if __name__ == '__main__':
-
     main()
