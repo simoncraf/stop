@@ -16,7 +16,7 @@ def savings_heuristic(nodes, origin, destination, num_paths, battery_limit, alph
     :return: List of Route objects.
     """
     nodes = sorted(nodes, key=lambda x: x.index)
-    solution = generate_dummy_soultion(nodes, origin, destination, battery_limit)
+    solution = generate_dummy_solution(nodes, origin, destination, battery_limit)
     distance_matrix = _compute_distance_matrix(nodes)
     rewards = [node.score for node in nodes]
     savings = _compute_savings_list(distance_matrix, rewards, alpha)
@@ -27,23 +27,30 @@ def savings_heuristic(nodes, origin, destination, num_paths, battery_limit, alph
             savings.remove(arc)
         else:
             arc = savings.pop(0)
-        routei, routej = Route(origin, destination), Route(origin, destination)
-        routei.add_node(nodes[arc[0]])
-        routej.add_node(nodes[arc[1]])
-        new_route = routei.merge(routej)
-        if new_route.is_route_feasible(battery_limit):
-            solution.append(new_route)
+        
+        route_i = _find_route_containing_node(solution, nodes[arc[0]])
+        route_j = _find_route_containing_node(solution, nodes[arc[1]])
+        
+        if route_i is not None and route_j is not None and route_i is not route_j:
+            new_route = route_i.merge(route_j)
+            if new_route.is_route_feasible(battery_limit):
+                solution.remove(route_i)
+                solution.remove(route_j)
+                solution.append(new_route)
+  
+  
     for route in solution:
-        route.nodes.append(destination)        
+        if route.nodes[-1] != destination:
+            route.nodes.append(destination)
+
     return sorted(solution, key=lambda x: x.total_score, reverse=True)[:num_paths]
 
-def generate_dummy_soultion(nodes, origin, destination, battery_limit):
+def generate_dummy_solution(nodes, origin, destination, battery_limit):
     routes = []
     for node in nodes[1:-1]:
         route = Route(origin, destination)
         route.add_node(node)
         if route.is_route_feasible(battery_limit):
-            route.add_node(destination)
             routes.append(route)
     return routes
 
@@ -84,6 +91,12 @@ def _biased_random_choice(savings, beta=0.3):
     probabilities = [beta * (1 - beta) ** i for i in range(len(savings))]
     probabilities = np.array(probabilities) / sum(probabilities)
     return savings[np.random.choice(len(savings), p=probabilities)]
+
+def _find_route_containing_node(solution, node):
+    for route in solution:
+        if node in route.nodes:
+            return route
+    return None
 
 def get_best_alpha(nodes, origin, destination, num_paths, battery_limit):
     alphas = np.linspace(0.1, 0.9, 100)
